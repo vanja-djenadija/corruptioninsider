@@ -1,0 +1,617 @@
+┌─────────────────────────────────────────────────────────────────────┐
+│                    BALKAN CORRUPTION INSIDER                         │
+│                         ETL PIPELINE                                 │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌───────────────┐     ┌──────────────┐     ┌─────────────────┐
+│  DATA SOURCES │────▶│ ETL PIPELINE │────▶│ RISK DETECTION  │
+└───────────────┘     └──────────────┘     └─────────────────┘
+                                                      │
+                                                      ▼
+                                            ┌─────────────────┐
+                                            │   REPORTING &   │
+                                            │    ANALYTICS    │
+                                            └─────────────────┘
+```
+
+---
+
+## 📥 2. DATA SOURCES (INPUT)
+```
+╔══════════════════════════════════════════════════════════════╗
+║                      DATA SOURCES                             ║
+╚══════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────┐
+│  🌐 PUBLIC PROCUREMENT PORTAL                                │
+│  https://open.ejn.gov.ba                                     │
+│                                                              │
+│  ┌────────────┐                                             │
+│  │ XLSX/CSV   │  Downloaded daily @ 2 AM                    │
+│  │ Export     │  Contains: Awards, Contracts, Suppliers     │
+│  └────────────┘                                             │
+└──────────────────────────────────────────────────────────────┘
+         │
+         │ Download
+         ▼
+┌──────────────────────────────────────────────────────────────┐
+│  📁 data/raw/                                                │
+│                                                              │
+│  procurement_20241104_020015.xlsx                           │
+│  procurement_20241103_020011.xlsx                           │
+│  procurement_20241102_020008.xlsx                           │
+│  ...                                                         │
+└──────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│  🏢 COMPANY REGISTRIES (Future)                              │
+│  • Republika Srpska: http://bizreg.esrpska.com              │
+│  • FBiH: https://fia.ba                                      │
+│  • Brčko: https://bizreg.osbd.ba                            │
+└──────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│  🚫 OPENSANCTIONS                                            │
+│  https://opensanctions.org                                   │
+│  Updated monthly                                             │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## ⚙️ 3. ETL PIPELINE (DETAILED FLOW)
+```
+╔══════════════════════════════════════════════════════════════════════╗
+║                         ETL PIPELINE FLOW                            ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+PHASE 1: EXTRACT
+═════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────┐
+│ STEP 1: SCRAPER (daily_scraper.py)                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  🕐 Cron: 0 2 * * *  (Daily @ 2 AM)                           │
+│                                                                 │
+│  ┌──────────┐      HTTP GET       ┌──────────────┐            │
+│  │ Script   │─────────────────────▶│ Portal API   │            │
+│  └──────────┘                      └──────────────┘            │
+│       │                                    │                    │
+│       │                                    │ XLSX file          │
+│       │                                    ▼                    │
+│       │                            ┌──────────────┐            │
+│       └───────────────────────────▶│ data/raw/    │            │
+│                                     │ file.xlsx    │            │
+│                                     └──────────────┘            │
+│                                                                 │
+│  ✓ Logs: logs/scraper.log                                      │
+│  ✓ Error handling: 3 retries with exponential backoff          │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+
+PHASE 2: TRANSFORM
+═════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────┐
+│ STEP 2: CONVERTER (xlsx_to_csv_converter.py)                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  📄 Input:  data/raw/procurement_20241104.xlsx                 │
+│  📄 Output: data/processed/procurement_20241104.csv            │
+│                                                                 │
+│  ┌──────────┐                                                  │
+│  │ XLSX     │                                                  │
+│  │ (Binary) │                                                  │
+│  └────┬─────┘                                                  │
+│       │                                                        │
+│       │ Read with pandas.read_excel()                          │
+│       │                                                        │
+│       ▼                                                        │
+│  ┌──────────────────────┐                                     │
+│  │ DataFrame            │                                     │
+│  │ ┌──────────────────┐ │                                     │
+│  │ │ Col1 │ Col2│ ... │ │                                     │
+│  │ ├──────┼─────┼─────┤ │                                     │
+│  │ │ Val1 │ Val2│ ... │ │                                     │
+│  │ └──────┴─────┴─────┘ │                                     │
+│  └──────────┬───────────┘                                     │
+│             │                                                 │
+│             │ Validate columns                                │
+│             │ Drop empty rows                                 │
+│             │                                                 │
+│             ▼                                                 │
+│  ┌──────────────────────┐                                     │
+│  │ CSV                  │                                     │
+│  │ UTF-8 encoded        │                                     │
+│  └──────────────────────┘                                     │
+│                                                                 │
+│  ✓ Validation: Column count, data types                        │
+│  ✓ Logs: logs/converter.log                                    │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+
+PHASE 3: LOAD - STAGING
+═════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────┐
+│ STEP 3: IMPORT TO RAW (import_csv_to_raw.py)                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  📄 CSV File(s)                                                │
+│  ───────────────                                               │
+│  procurement_20241104.csv  ─┐                                  │
+│  procurement_20241103.csv  ─┤                                  │
+│  procurement_20241102.csv  ─┤                                  │
+│                             │                                  │
+│                             │ LOOP                             │
+│                             │                                  │
+│  ┌──────────────────────────▼─────────────────────────┐       │
+│  │  for each CSV:                                     │       │
+│  │    LOAD DATA LOCAL INFILE 'file.csv'              │       │
+│  │    INTO TABLE awards_raw                           │       │
+│  │    FIELDS TERMINATED BY ','                        │       │
+│  │    ENCLOSED BY '"'                                 │       │
+│  │    LINES TERMINATED BY '\n'                        │       │
+│  │    IGNORE 1 ROWS;                                  │       │
+│  └────────────────────────────────────────────────────┘       │
+│                             │                                  │
+│                             ▼                                  │
+│  ┌─────────────────────────────────────────────────────┐      │
+│  │ 🗄️  MySQL: awards_raw (STAGING TABLE)             │      │
+│  ├─────────────────────────────────────────────────────┤      │
+│  │ Columns: Exact match to CSV headers                │      │
+│  │ • Ugovorni organ (UO)                              │      │
+│  │ • UO: PIB                                          │      │
+│  │ • Broj postupka                                    │      │
+│  │ • Vrijednost ugovora/okvirnog sporazuma            │      │
+│  │ • ... (48 columns total)                           │      │
+│  │                                                     │      │
+│  │ ⚡ Performance: ~100,000 rows in 5-10 seconds      │      │
+│  └─────────────────────────────────────────────────────┘      │
+│                                                                 │
+│  ✓ Tracking: logs/imported_files.json                          │
+│  ✓ No duplicates: Skip already imported files                  │
+└─────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+
+PHASE 4: TRANSFORM - NORMALIZATION
+═════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────┐
+│ STEP 4: POPULATE TABLES (populate_tables.sql)                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  🗄️  awards_raw (FLAT STRUCTURE)                              │
+│  ─────────────────────────────────                             │
+│                                                                 │
+│        │ SQL Transformations:                                  │
+│        │ • Column mapping                                      │
+│        │ • Data type conversion                                │
+│        │ • Date parsing (DD.MM.YYYY → YYYY-MM-DD)             │
+│        │ • Decimal parsing (11.078,00 → 11078.00)             │
+│        │ • Boolean conversion (Yes/Da → 1, No/Ne → 0)         │
+│        │                                                       │
+│        ▼                                                       │
+│                                                                 │
+│  ╔══════════════════════════════════════════════════════╗      │
+│  ║     NORMALIZED RELATIONAL DATABASE                   ║      │
+│  ╚══════════════════════════════════════════════════════╝      │
+│                                                                 │
+│  ┌─────────────────────┐                                       │
+│  │ contracting_        │                                       │
+│  │ authority           │                                       │
+│  ├─────────────────────┤                                       │
+│  │ • id (PK)           │                                       │
+│  │ • name              │◀──────────┐                          │
+│  │ • tax_number (UK)   │           │                          │
+│  │ • city              │           │ FK                       │
+│  │ • type              │           │                          │
+│  └─────────────────────┘           │                          │
+│                                     │                          │
+│  ┌─────────────────────┐           │                          │
+│  │ procurement_        │           │                          │
+│  │ procedure           │           │                          │
+│  ├─────────────────────┤           │                          │
+│  │ • id (PK)           │           │                          │
+│  │ • number (UK)       │◀──────┐   │                          │
+│  │ • name              │       │   │                          │
+│  │ • type              │       │ FK│                          │
+│  │ • contract_type     │       │   │                          │
+│  └─────────────────────┘       │   │                          │
+│                                 │   │                          │
+│  ┌─────────────────────┐       │   │                          │
+│  │ award               │       │   │                          │
+│  ├─────────────────────┤       │   │                          │
+│  │ • id (PK)           │       │   │                          │
+│  │ • contracting_      │───────┘   │                          │
+│  │   authority_id (FK) │───────────┘                          │
+│  │ • procedure_id (FK) │                                      │
+│  │ • value (DECIMAL)   │                                      │
+│  │ • contract_date     │───────┐                              │
+│  │ • num_bids          │       │                              │
+│  └─────────────────────┘       │                              │
+│           │                     │                              │
+│           │ M:N                 │                              │
+│           ▼                     │                              │
+│  ┌─────────────────────┐       │                              │
+│  │ award_supplier      │       │                              │
+│  ├─────────────────────┤       │                              │
+│  │ • award_id (FK)     │       │                              │
+│  │ • supplier_id (FK)  │───┐   │                              │
+│  │ • role              │   │   │                              │
+│  └─────────────────────┘   │   │                              │
+│                             │   │                              │
+│  ┌─────────────────────┐   │   │                              │
+│  │ supplier            │   │   │                              │
+│  ├─────────────────────┤   │   │                              │
+│  │ • id (PK)           │◀──┘   │                              │
+│  │ • name              │       │                              │
+│  │ • tax_number        │       │                              │
+│  │ • country           │       │                              │
+│  └─────────────────────┘       │                              │
+│                                 │                              │
+│  ✓ Data Quality:                │                              │
+│    • No orphaned records        │                              │
+│    • Referential integrity      │                              │
+│    • Proper indexes             │                              │
+└─────────────────────────────────┼──────────────────────────────┘
+                                  │
+                                  ▼
+```
+
+---
+
+## 🚨 4. RISK DETECTION ENGINE
+```
+╔══════════════════════════════════════════════════════════════════════╗
+║                      RISK INDICATOR ANALYSIS                         ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────┐
+│ STEP 5: CALCULATE RISKS (calculate_risks.py)                    │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Input: Normalized tables                                       │
+│                                                                  │
+│  ┌────────────────────────────────────────────────┐             │
+│  │  RISK INDICATOR SCRIPTS                        │             │
+│  ├────────────────────────────────────────────────┤             │
+│  │                                                │             │
+│  │  🔍 RI-PROC-01: Less Transparent Procedures   │             │
+│  │  ─────────────────────────────────────────     │             │
+│  │  SELECT award_id                               │             │
+│  │  FROM award a                                  │             │
+│  │  JOIN procurement_procedure pp                 │             │
+│  │  WHERE pp.type IN (                            │             │
+│  │    'Competitive request',                      │             │
+│  │    'Negotiated procedure'                      │             │
+│  │  )                                             │             │
+│  │  → Risk Level: HIGH                            │             │
+│  │                                                │             │
+│  ├────────────────────────────────────────────────┤             │
+│  │                                                │             │
+│  │  🔍 RI-PROC-02: Low Competition               │             │
+│  │  ─────────────────────────────────────────     │             │
+│  │  SELECT award_id                               │             │
+│  │  FROM award                                    │             │
+│  │  WHERE number_of_received_offers <= 3          │             │
+│  │                                                │             │
+│  │  Cases:                                        │             │
+│  │  • 1 bid  → CRITICAL                          │             │
+│  │  • 2 bids → HIGH                              │             │
+│  │  • 3 bids → MEDIUM                            │             │
+│  │                                                │             │
+│  ├────────────────────────────────────────────────┤             │
+│  │                                                │             │
+│  │  🔍 RI-SUPP-01: Sanctioned Suppliers          │             │
+│  │  ─────────────────────────────────────────     │             │
+│  │  SELECT award_id                               │             │
+│  │  FROM award a                                  │             │
+│  │  JOIN award_supplier aws                       │             │
+│  │  JOIN supplier s                               │             │
+│  │  JOIN sanction san                             │             │
+│  │    ON s.tax_number = san.tax_number            │             │
+│  │  → Risk Level: CRITICAL                        │             │
+│  │                                                │             │
+│  ├────────────────────────────────────────────────┤             │
+│  │                                                │             │
+│  │  🔍 RI-OWNER-01: Shared Ownership (Future)    │             │
+│  │  ─────────────────────────────────────────     │             │
+│  │  Detect competing bidders with                 │             │
+│  │  same owners/founders                          │             │
+│  │  → Risk Level: HIGH                            │             │
+│  │                                                │             │
+│  ├────────────────────────────────────────────────┤             │
+│  │                                                │             │
+│  │  🔍 RI-TIME-01: Pre-Election Contracts        │             │
+│  │  ─────────────────────────────────────────     │             │
+│  │  SELECT award_id                               │             │
+│  │  FROM award                                    │             │
+│  │  WHERE contract_date BETWEEN                   │             │
+│  │    election_date - 90 DAYS                     │             │
+│  │    AND election_date                           │             │
+│  │  → Risk Level: MEDIUM                          │             │
+│  │                                                │             │
+│  └────────────────────────────────────────────────┘             │
+│                          │                                      │
+│                          │ INSERT INTO                          │
+│                          ▼                                      │
+│  ┌─────────────────────────────────────────────────┐           │
+│  │ 🗄️  risk_score TABLE                           │           │
+│  ├─────────────────────────────────────────────────┤           │
+│  │ • award_id (FK)                                │           │
+│  │ • risk_type                                    │           │
+│  │ • risk_level (Critical/High/Medium/Low)        │           │
+│  │ • risk_code (RI-PROC-01, RI-PROC-02, ...)     │           │
+│  │ • description                                  │           │
+│  │ • details (JSON)                               │           │
+│  │ • detected_at (TIMESTAMP)                      │           │
+│  └─────────────────────────────────────────────────┘           │
+│                                                                  │
+│  Example record:                                                │
+│  ┌──────────────────────────────────────────────────────┐      │
+│  │ award_id: 12345                                      │      │
+│  │ risk_type: "Procedural Risk"                         │      │
+│  │ risk_level: "High"                                   │      │
+│  │ risk_code: "RI-PROC-01"                             │      │
+│  │ description: "Less transparent procedure:            │      │
+│  │               Competitive request"                   │      │
+│  │ details: {                                           │      │
+│  │   "procedure_type": "Competitive request",           │      │
+│  │   "contracting_authority": "Municipality Srbac",     │      │
+│  │   "award_value": 11078.00,                          │      │
+│  │   "contract_date": "2022-03-09"                     │      │
+│  │ }                                                    │      │
+│  └──────────────────────────────────────────────────────┘      │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📊 5. REPORTING & ANALYTICS LAYER
+```
+╔══════════════════════════════════════════════════════════════════════╗
+║                    REPORTING & ANALYTICS                             ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────┐
+│ SQL VIEWS (Pre-aggregated queries for dashboard)                │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  📈 vw_high_risk_awards                                         │
+│  ─────────────────────────────────────────                      │
+│  Award ID | Authority | Supplier | Value | Risk Flags          │
+│  ──────────┼───────────┼──────────┼───────┼──────────           │
+│  12345     │ Mun. X    │ Comp. A  │ 150K  │ 🔴 Critical (2)    │
+│  12346     │ Mun. Y    │ Comp. B  │ 200K  │ 🟠 High (3)        │
+│                                                                  │
+│  📊 vw_risk_summary                                             │
+│  ─────────────────────────────────────────                      │
+│  Risk Code  | Type       | Level    | Count | Total Value      │
+│  ───────────┼────────────┼──────────┼───────┼──────────        │
+│  RI-PROC-01 │ Procedural │ High     │ 1,250 │ 45M BAM          │
+│  RI-PROC-02 │ Competition│ Critical │   340 │ 12M BAM          │
+│                                                                  │
+│  🏢 vw_risk_by_authority                                        │
+│  ─────────────────────────────────────────                      │
+│  Authority    | Total Awards | Risk % | Critical Risks         │
+│  ─────────────┼──────────────┼────────┼──────────              │
+│  Municipality │     450      │  35%   │    12                  │
+│  Hospital Z   │     120      │  60%   │    25                  │
+│                                                                  │
+│  👤 vw_supplier_risk_profile                                    │
+│  ─────────────────────────────────────────                      │
+│  Supplier   | Contracts | Total Value | Risk Flags             │
+│  ───────────┼───────────┼─────────────┼──────────              │
+│  Company A  │    45     │   2.5M BAM  │ 🔴 15                  │
+│  Company B  │    12     │   500K BAM  │ 🟠 8                   │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌──────────────────────────────────────────────────────────────────┐
+│ OUTPUTS                                                          │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  📧 Email Alerts (Daily)                                        │
+│  ─────────────────────────────────────────                      │
+│  Subject: [BCI Alert] 5 Critical Risks Detected                │
+│                                                                  │
+│  Today's scan identified:                                       │
+│  • 5 critical risk flags                                       │
+│  • 12 high risk flags                                          │
+│  • Total affected value: 2.3M BAM                              │
+│                                                                  │
+│  Top risky award: #12345 (Municipality X)                      │
+│  - Single bidder (Critical)                                    │
+│  - Negotiated procedure (High)                                 │
+│  - Value: 150,000 BAM                                          │
+│                                                                  │
+│  [View Full Report]                                            │
+│                                                                  │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  🌐 Web Dashboard (Future)                                      │
+│  ─────────────────────────────────────────                      │
+│  ┌────────────────────────────────────────────┐                │
+│  │  BALKAN CORRUPTION INSIDER                 │                │
+│  ├────────────────────────────────────────────┤                │
+│  │                                            │                │
+│  │  📊 Dashboard Overview                     │                │
+│  │  ─────────────────────────                 │                │
+│  │  Total Awards: 287,752                     │                │
+│  │  Risk Flags: 15,234 (5.3%)                │                │
+│  │                                            │                │
+│  │  🔴 Critical: 340                          │                │
+│  │  🟠 High: 2,450                            │                │
+│  │  🟡 Medium: 12,444                         │                │
+│  │                                            │                │
+│  │  [Search] [Filter] [Export]               │                │
+│  │                                            │                │
+│  │  📈 Risk Trends (Chart)                    │                │
+│  │  📍 Geographic Heatmap                     │                │
+│  │  🏆 Top Risky Authorities                  │                │
+│  │                                            │                │
+│  └────────────────────────────────────────────┘                │
+│                                                                  │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  📄 CSV Exports                                                 │
+│  ─────────────────────────────────────────                      │
+│  • high_risk_awards_2024-11-04.csv                             │
+│  • supplier_risk_profile_2024-11-04.csv                        │
+│  • monthly_report_2024-10.csv                                  │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## ⏰ 6. AUTOMATION & SCHEDULING
+```
+╔══════════════════════════════════════════════════════════════════════╗
+║                     CRON JOBS & AUTOMATION                           ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────┐
+│ DAILY @ 2:00 AM                                                  │
+├──────────────────────────────────────────────────────────────────┤
+│  ./run_etl_pipeline.sh                                           │
+│                                                                  │
+│  [1/6] Download procurement data      ⏱️  ~2 min               │
+│  [2/6] Convert XLSX → CSV             ⏱️  ~1 min               │
+│  [3/6] Import to awards_raw           ⏱️  ~30 sec              │
+│  [4/6] Populate normalized tables     ⏱️  ~2 min               │
+│  [5/6] Calculate risk indicators      ⏱️  ~1 min               │
+│  [6/6] Generate summary report        ⏱️  ~30 sec              │
+│                                                                  │
+│  ✓ Total duration: ~7 minutes                                   │
+│  ✓ Log: logs/pipeline_2024-11-04_02-00-15.log                  │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│ WEEKLY @ Sunday 3:00 AM                                          │
+├──────────────────────────────────────────────────────────────────┤
+│  Cleanup old files (30+ days)                                   │
+│  Database backup                                                 │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│ MONTHLY @ 1st of month, 1:00 AM                                  │
+├──────────────────────────────────────────────────────────────────┤
+│  Update sanctions list (OpenSanctions)                          │
+│  Generate monthly aggregated reports                             │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🗄️ 7. DATABASE SCHEMA VISUALIZATION
+```
+╔══════════════════════════════════════════════════════════════════════╗
+║                    DATABASE ENTITY RELATIONSHIPS                     ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+                    ┌───────────────────────┐
+                    │  contracting_         │
+                    │  authority            │
+                    ├───────────────────────┤
+                    │ PK: id                │
+                    │ UK: tax_number        │
+                    │     name              │
+                    │     city              │
+                    └───────────┬───────────┘
+                                │
+                                │ 1:N
+                                │
+        ┌───────────────────────┼───────────────────────┐
+        │                       │                       │
+        │                       ▼                       │
+        │           ┌───────────────────────┐           │
+        │           │  procurement_         │           │
+        │           │  procedure            │           │
+        │           ├───────────────────────┤           │
+        │           │ PK: id                │           │
+        │           │ UK: number            │           │
+        │           │     name              │           │
+        │           │     type ◄────────────┼───── Risk Indicator
+        │           │     contract_type     │           │
+        │           └───────────┬───────────┘           │
+        │                       │                       │
+        │                       │ 1:N                   │
+        │                       │                       │
+        │                       ▼                       │
+        │           ┌───────────────────────┐           │
+        │           │  award                │◄──────────┘
+        │           ├───────────────────────┤
+        │           │ PK: id                │
+        │           │ FK: contracting_      │
+        │           │     authority_id      │
+        │           │ FK: procedure_id      │
+        │           │     value             │◄───── Risk Indicator
+        │           │     contract_date     │◄───── Risk Indicator
+        │           │     num_received_bids │◄───── Risk Indicator
+        │           │     num_acceptable    │
+        │           └───────────┬───────────┘
+        │                       │
+        │                       │ 1:N
+        │                       │
+        │                       ▼
+        │           ┌───────────────────────┐
+        │           │  award_supplier       │
+        │           │  (Junction Table)     │
+        │           ├───────────────────────┤
+        │           │ PK: id                │
+        │           │ FK: award_id          │
+        │           │ FK: supplier_id       │
+        │           │     role              │
+        │           └───────────┬───────────┘
+        │                       │
+        │                       │ N:1
+        │                       │
+        │                       ▼
+        │           ┌───────────────────────┐
+        │           │  supplier             │
+        │           ├───────────────────────┤
+        │           │ PK: id                │
+        │           │     name              │
+        │           │     tax_number ◄──────┼───── JOIN with sanctions
+        │           │     country           │
+        │           │     is_foreign        │
+        │           └───────────┬───────────┘
+        │                       │
+        │                       │
+        └───────────────────────┼───────────────────────┐
+                                │                       │
+                                ▼                       ▼
+                    ┌───────────────────────┐  ┌───────────────────────┐
+                    │  company_registry     │  │  sanction             │
+                    ├───────────────────────┤  ├───────────────────────┤
+                    │ PK: id                │  │ PK: id                │
+                    │ UK: tax_number        │  │     name              │
+                    │     name              │  │     type              │
+                    │     founders_owners   │  │     tax_number        │
+                    │     (JSON)            │  │     source_link       │
+                    └───────────────────────┘  └───────────────────────┘
+                                                          │
+                                ┌─────────────────────────┘
+                                │
+                                │ Referenced by Risk Indicator
+                                │ RI-SUPP-01
+                                ▼
+                    ┌───────────────────────┐
+                    │  risk_score           │
+                    ├───────────────────────┤
+                    │ PK: id                │
+                    │ FK: award_id          │
+                    │     risk_type         │
+                    │     risk_level        │
+                    │     risk_code         │
+                    │     description       │
+                    │     details (JSON)    │
+                    │     detected_at       │
+                    └───────────────────────┘

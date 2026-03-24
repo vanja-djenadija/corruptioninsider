@@ -1,0 +1,41 @@
+# Windows reserved names
+nul
+
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# Data (keep structure, ignore actual data files)
+data/raw/**/*.xlsx
+data/raw/**/*.csv
+data/processed/**/*.csv
+data/processed/**/*.json
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Docker
+postgres_data/
+pgadmin_data/

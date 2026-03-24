@@ -1,0 +1,10 @@
+{
+  "database_url": "postgresql://pyhack:pyhack_secret@localhost:5433/pyhackcorruption",
+  "raw_directory": "data/raw/ba/company_registry",
+  "log_directory": "data/logs",
+  "request_timeout": 120,
+  "page_size": 5000,
+  "sign_in_endpoint": "https://api-identity.fia.ba/Users/SignIn",
+  "legal_entities_endpoint": "https://api.fia.ba/api/LegalEntities",
+  "client_id": "6CAC6ED4-EDA2-4A30-BF01-29CD88E52F44"
+}

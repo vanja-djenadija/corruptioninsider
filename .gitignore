@@ -1,0 +1,146 @@
+data/raw/
+logs/
+
+# ======================================================
+# PYTHON
+# ======================================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ======================================================
+# VIRTUAL ENVIRONMENTS
+# ======================================================
+.venv/
+venv/
+ENV/
+env/
+
+# Python version management
+.python-version
+.pyenv/
+pythonenv*/
+
+# ======================================================
+# PYCHARM / IDE
+# ======================================================
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+.claude/
+
+# Editor backup files
+*.swp
+*.swo
+*~
+.*.swp
+.*.swo
+
+# ======================================================
+# LOG FILES
+# ======================================================
+*.log
+logs/
+scraper.log
+*_test.log
+*_scraper.log
+
+# ======================================================
+# DATA FILES (RAW / PROCESSED / EXPORTS)
+# ======================================================
+data/
+downloads/
+*.csv
+*.xlsx
+*.xls
+*.parquet
+*.jsonl
+
+# ======================================================
+# DATABASE / LOCAL STATE
+# ======================================================
+*.db
+*.sqlite
+*.sqlite3
+
+# ======================================================
+# TEMP / OS FILES
+# ======================================================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+
+# ======================================================
+# SECRETS / CONFIG
+# ======================================================
+.env
+.env.*
+backend/*.env
+config.local.json
+config.dev.json
+config.prod.json
+
+# ======================================================
+# MIGRATIONS / BUILD ARTIFACTS (if added later)
+# ======================================================
+alembic/versions/__pycache__/
+dist/
+build/
+
+# ======================================================
+# JUPYTER / NOTEBOOKS
+# ======================================================
+.ipynb_checkpoints/
+
+# ======================================================
+# TEST ARTIFACTS
+# ======================================================
+.coverage.*
+test-results/
+# Note: test_*.py files in tests/ directory are kept (our test suite)
+
+# ======================================================
+# DOCKER (if you add later)
+# ======================================================
+*.pid
+
+# ======================================================
+# SELENIUM / BROWSER DRIVERS
+# ======================================================
+chromedriver
+chromedriver.exe
+geckodriver
+geckodriver.exe
+msedgedriver
+msedgedriver.exe
+*driver.log
+
+# ======================================================
+# DOCUMENTATION
+# ======================================================
+*.md
+
+# ======================================================
+# PACKAGE MANAGEMENT
+# ======================================================
+pip-log.txt
+pip-delete-this-directory.txt
+.pip/
+
+# Node.js
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

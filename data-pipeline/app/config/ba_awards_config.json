@@ -1,0 +1,16 @@
+{
+  "source_country": "BA",
+  "source_system": "EJN",
+  "database_url": "postgresql://pyhack:pyhack_secret@localhost:5433/pyhackcorruption",
+  "raw_directory": "data/raw/ba/awards",
+  "processed_directory": "data/processed/ba/awards",
+  "ba_export_endpoint": "https://api.next.ejn.gov.ba/Api/Awards/GetExport",
+  "max_retries": 3,
+  "retry_delay": 5,
+  "request_timeout": 60,
+  "from_date": "2026-01-11T23:00:00.000Z",
+  "to_date": "2026-01-13T23:00:00.000Z",
+  "headless_mode": true,
+  "wait_timeout": 15,
+  "log_directory": "data/logs"
+}

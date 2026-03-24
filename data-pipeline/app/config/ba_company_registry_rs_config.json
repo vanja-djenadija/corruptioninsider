@@ -1,0 +1,9 @@
+{
+  "database_url": "postgresql://pyhack:pyhack_secret@localhost:5433/pyhackcorruption",
+  "raw_directory": "data/raw/ba/company_registry_rs",
+  "log_directory": "data/logs",
+  "request_timeout": 300,
+  "page_size": 1000,
+  "concurrency": 10,
+  "legal_entities_endpoint": "http://bizreg.esrpska.com/Home/SearchPoslovniSubjekt"
+}

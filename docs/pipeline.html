@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Balkan ETL Pipeline - Visual Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+        .mermaid {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .legend {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+        .legend h3 {
+            margin-top: 0;
+            color: #856404;
+        }
+        .legend ul {
+            list-style: none;
+            padding: 0;
+        }
+        .legend li {
+            margin: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        .legend li:before {
+            content: "▶";
+            position: absolute;
+            left: 0;
+            color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Balkan Corruption Insider</h1>
+        <p class="subtitle">ETL Pipeline & Risk Detection System</p>
+
+        <!-- HIGH LEVEL OVERVIEW -->
+        <h2>📊 System Overview</h2>
+        <div class="mermaid">
+graph LR
+    A[🌐 Data Sources] --> B[⚙️ ETL Pipeline]
+    B --> C[🗄️ Database]
+    C --> D[🚨 Risk Detection]
+    D --> E[📈 Reporting]
+
+    style A fill:#e3f2fd
+    style B fill:#fff3e0
+    style C fill:#e8f5e9
+    style D fill:#ffebee
+    style E fill:#f3e5f5
+        </div>
+
+        <!-- DETAILED ETL FLOW -->
+        <h2>🔄 Detailed ETL Pipeline Flow</h2>
+        <div class="mermaid">
+graph TB
+    subgraph "📥 PHASE 1: EXTRACT"
+        A1[🌐 Procurement Portal<br/>open.ejn.gov.ba]
+        A2[📄 Download XLSX<br/>daily_scraper.py]
+        A3[💾 Save to data/raw/<br/>procurement_YYYYMMDD.xlsx]
+
+        A1 -->|HTTP GET| A2
+        A2 -->|Save| A3
+    end
+
+    subgraph "🔧 PHASE 2: TRANSFORM"
+        B1[📄 XLSX File]
+        B2[🔄 Convert to CSV<br/>xlsx_to_csv_converter.py]
+        B3[✅ Validate Data]
+        B4[💾 Save to data/processed/<br/>procurement_YYYYMMDD.csv]
+
+        B1 --> B2
+        B2 --> B3
+        B3 --> B4
+    end
+
+    subgraph "📤 PHASE 3: LOAD - STAGING"
+        C1[📄 CSV Files]
+        C2[⚡ LOAD DATA INFILE<br/>import_csv_to_raw.py]
+        C3[(🗄️ awards_raw<br/>Staging Table)]
+
+        C1 -->|Loop through files| C2
+        C2 -->|Bulk Insert| C3
+    end
+
+    subgraph "🔀 PHASE 4: NORMALIZATION"
+        D1[(awards_raw)]
+        D2[🔄 SQL Transform<br/>populate_tables.sql]
+        D3[(contracting_authority)]
+        D4[(procurement_procedure)]
+        D5[(supplier)]
+        D6[(award)]
+        D7[(award_supplier)]
+
+        D1 --> D2
+        D2 --> D3
+        D2 --> D4
+        D2 --> D5
+        D2 --> D6
+        D2 --> D7
+    end
+
+    subgraph "🚨 PHASE 5: RISK DETECTION"
+        E1[(Normalized Tables)]
+        E2[🔍 RI-PROC-01<br/>Less Transparent]
+        E3[🔍 RI-PROC-02<br/>Low Competition]
+        E4[🔍 RI-SUPP-01<br/>Sanctioned Entities]
+        E5[(risk_score)]
+
+        E1 --> E2
+        E1 --> E3
+        E1 --> E4
+        E2 --> E5
+        E3 --> E5
+        E4 --> E5
+    end
+
+    subgraph "📊 PHASE 6: REPORTING"
+        F1[(risk_score + awards)]
+        F2[📈 SQL Views]
+        F3[📧 Email Alerts]
+        F4[📄 CSV Reports]
+        F5[🌐 Dashboard Future]
+
+        F1 --> F2
+        F2 --> F3
+        F2 --> F4
+        F2 --> F5
+    end
+
+    A3 --> B1
+    B4 --> C1
+    C3 --> D1
+    D7 --> E1
+    E5 --> F1
+
+    style A1 fill:#e3f2fd
+    style A2 fill:#e3f2fd
+    style A3 fill:#e3f2fd
+    style B1 fill:#fff3e0
+    style B2 fill:#fff3e0
+    style B3 fill:#fff3e0
+    style B4 fill:#fff3e0
+    style C1 fill:#e8f5e9
+    style C2 fill:#e8f5e9
+    style C3 fill:#e8f5e9
+    style D1 fill:#f3e5f5
+    style D2 fill:#f3e5f5
+    style D3 fill:#f3e5f5
+    style D4 fill:#f3e5f5
+    style D5 fill:#f3e5f5
+    style D6 fill:#f3e5f5
+    style D7 fill:#f3e5f5
+    style E1 fill:#ffebee
+    style E2 fill:#ffebee
+    style E3 fill:#ffebee
+    style E4 fill:#ffebee
+    style E5 fill:#ffebee
+    style F1 fill:#fce4ec
+    style F2 fill:#fce4ec
+    style F3 fill:#fce4ec
+    style F4 fill:#fce4ec
+    style F5 fill:#fce4ec
+        </div>
+
+        <!-- DATABASE SCHEMA -->
+        <h2>🗄️ Database Schema & Relationships</h2>
+        <div class="mermaid">
+erDiagram
+    contracting_authority ||--o{ award : "issues"
+    procurement_procedure ||--o{ award : "has"
+    award ||--o{ award_supplier : "links"
+    supplier ||--o{ award_supplier : "wins"
+    award ||--o{ risk_score : "flagged_in"
+    supplier ||--o{ sanction : "may_match"
+    supplier ||--o{ company_registry : "registered_in"
+
+    contracting_authority {
+        int id PK
+        varchar tax_number UK
+        varchar name
+        varchar city
+        varchar type
+        varchar admin_level
+    }
+
+    procurement_procedure {
+        int id PK
+        varchar number UK
+        text name
+        varchar type
+        varchar contract_type
+        varchar category
+    }
+
+    award {
+        int id PK
+        int contracting_authority_id FK
+        int procedure_id FK
+        decimal value
+        date contract_date
+        int number_of_received_offers
+        boolean eu_funds_used
+    }
+
+    supplier {
+        int id PK
+        varchar tax_number
+        text name
+        varchar country
+        boolean is_foreign
+    }
+
+    award_supplier {
+        int id PK
+        int award_id FK
+        int supplier_id FK
+        varchar role
+    }
+
+    risk_score {
+        int id PK
+        int award_id FK
+        varchar risk_type
+        enum risk_level
+        varchar risk_code
+        text description
+        json details
+    }
+
+    sanction {
+        int id PK
+        text name
+        enum type
+        varchar tax_number
+        varchar source_link
+    }
+
+    company_registry {
+        int id PK
+        varchar tax_number UK
+        text name
+        json founders_owners
+    }
+        </div>
+
+        <!-- RISK INDICATORS -->
+        <h2>🚨 Risk Detection Logic</h2>
+        <div class="mermaid">
+graph TD
+    A[📊 Award Data] --> B{Risk Analysis}
+
+    B --> C1[🔍 RI-PROC-01<br/>Procedure Type Check]
+    B --> C2[🔍 RI-PROC-02<br/>Competition Check]
+    B --> C3[🔍 RI-SUPP-01<br/>Sanctions Check]
+    B --> C4[🔍 RI-OWNER-01<br/>Ownership Check]
+    B --> C5[🔍 RI-TIME-01<br/>Election Timing]
+
+    C1 --> D1{Negotiated or<br/>Competitive Request?}
+    D1 -->|Yes| R1[🔴 HIGH RISK]
+    D1 -->|No| OK1[✅ OK]
+
+    C2 --> D2{How many bids?}
+    D2 -->|1 bid| R2[🔴 CRITICAL]
+    D2 -->|2 bids| R3[🟠 HIGH]
+    D2 -->|3 bids| R4[🟡 MEDIUM]
+    D2 -->|4+ bids| OK2[✅ OK]
+
+    C3 --> D3{Supplier on<br/>sanctions list?}
+    D3 -->|Yes| R5[🔴 CRITICAL]
+    D3 -->|No| OK3[✅ OK]
+
+    C4 --> D4{Competing bidders<br/>share owners?}
+    D4 -->|Yes| R6[🟠 HIGH]
+    D4 -->|No| OK4[✅ OK]
+
+    C5 --> D5{Contract signed<br/>90 days before election?}
+    D5 -->|Yes| R7[🟡 MEDIUM]
+    D5 -->|No| OK5[✅ OK]
+
+    R1 --> F[(risk_score table)]
+    R2 --> F
+    R3 --> F
+    R4 --> F
+    R5 --> F
+    R6 --> F
+    R7 --> F
+
+    style R1 fill:#ff6b6b
+    style R2 fill:#ff6b6b
+    style R3 fill:#ffa500
+    style R4 fill:#ffd700
+    style R5 fill:#ff6b6b
+    style R6 fill:#ffa500
+    style R7 fill:#ffd700
+    style OK1 fill:#90ee90
+    style OK2 fill:#90ee90
+    style OK3 fill:#90ee90
+    style OK4 fill:#90ee90
+    style OK5 fill:#90ee90
+        </div>
+
+        <!-- AUTOMATION SCHEDULE -->
+        <h2>⏰ Automation Schedule</h2>
+        <div class="mermaid">
+gantt
+    title ETL Pipeline Automation Schedule
+    dateFormat HH:mm
+    axisFormat %H:%M
+
+    section Daily (2 AM)
+    Download Data      :a1, 02:00, 2m
+    Convert to CSV     :a2, after a1, 1m
+    Import to Raw      :a3, after a2, 30s
+    Normalize Data     :a4, after a3, 2m
+    Calculate Risks    :a5, after a4, 1m
+    Generate Reports   :a6, after a5, 30s
+
+    section Weekly (Sun 3 AM)
+    Cleanup Files      :b1, 03:00, 10m
+    Database Backup    :b2, after b1, 15m
+
+    section Monthly (1st @ 1 AM)
+    Update Sanctions   :c1, 01:00, 30m
+    Monthly Report     :c2, after c1, 20m
+        </div>
+
+        <!-- LEGEND -->
+        <div class="legend">
+            <h3>📌 Legend & Key Information</h3>
+            <ul>
+                <li><strong>🔴 CRITICAL Risk:</strong> Immediate attention required (e.g., single bidder, sanctioned supplier)</li>
+                <li><strong>🟠 HIGH Risk:</strong> Significant concerns (e.g., 2 bidders, negotiated procedure)</li>
+                <li><strong>🟡 MEDIUM Risk:</strong> Moderate concerns (e.g., 3 bidders, pre-election timing)</li>
+                <li><strong>✅ LOW/OK:</strong> No significant red flags detected</li>
+                <li><strong>⚡ LOAD DATA INFILE:</strong> MySQL bulk import - 50-100x faster than row-by-row</li>
+                <li><strong>📊 SQL Views:</strong> Pre-aggregated queries for fast dashboard loading</li>
+                <li><strong>🔄 Cron Jobs:</strong> Automated scheduling (daily/weekly/monthly)</li>
+            </ul>
+        </div>
+
+        <!-- FOOTER -->
+        <div style="text-align: center; margin-top: 40px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <p><strong>📧 Balkan Corruption Insider</strong></p>
+            <p>Anti-Corruption Public Procurement Monitoring System</p>
+            <p style="font-size: 12px; color: #666;">Last Updated: November 2024</p>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+    </script>
+</body>
+</html>
