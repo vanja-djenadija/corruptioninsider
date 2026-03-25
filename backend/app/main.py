@@ -6,8 +6,10 @@ app = FastAPI(
     title="Balkan Corruption Insider API",
     description="API for accessing public procurement data and corruption risk indicators",
     version="1.0.0",
+    root_path="/api",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
 
 # CORS configuration

@@ -24,7 +24,7 @@ export default function Home() {
               <Link href="/dashboard">
                 <Button variant="outline" size="sm">Dashboard</Button>
               </Link>
-              <Link href="https://github.com/yourusername/HackCorruption" target="_blank">
+              <Link href="https://github.com/vanja-djenadija/corruptioninsider" target="_blank">
                 <Button variant="ghost" size="sm" className="gap-2">
                   <Github className="w-4 h-4" />
                   GitHub
