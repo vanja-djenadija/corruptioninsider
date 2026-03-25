@@ -67,7 +67,7 @@ export default function Home() {
                 </Button>
               </Link>
 
-              <Link href="https://github.com/yourusername/HackCorruption" target="_blank">
+              <Link href="https://github.com/vanja-djenadija/corruptioninsider" target="_blank">
                 <Button size="lg" variant="outline" className="gap-2">
                   <Github className="w-4 h-4" />
                   View on GitHub
@@ -379,7 +379,7 @@ export default function Home() {
                 <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
-            <Link href="https://github.com/yourusername/HackCorruption" target="_blank">
+            <Link href="https://github.com/vanja-djenadija/corruptioninsider" target="_blank">
               <Button size="lg" variant="outline" className="gap-2 bg-transparent text-primary-foreground border-primary-foreground hover:bg-primary-foreground/10">
                 <Github className="w-4 h-4" />
                 Contribute
@@ -408,7 +408,7 @@ export default function Home() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="/about" className="hover:text-foreground transition-colors">About</Link></li>
                 <li><Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link></li>
-                <li><Link href="https://github.com/yourusername/HackCorruption" className="hover:text-foreground transition-colors">Documentation</Link></li>
+                <li><Link href="https://github.com/vanja-djenadija/corruptioninsider" className="hover:text-foreground transition-colors">Documentation</Link></li>
               </ul>
             </div>
 
@@ -437,7 +437,7 @@ export default function Home() {
               <h4 className="font-semibold mb-3">Connect</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>
-                  <a href="https://github.com/yourusername/HackCorruption" target="_blank" className="hover:text-foreground transition-colors flex items-center gap-2">
+                  <a href="https://github.com/vanja-djenadija/corruptioninsider" target="_blank" className="hover:text-foreground transition-colors flex items-center gap-2">
                     <Github className="w-4 h-4" />
                     GitHub
                   </a>
