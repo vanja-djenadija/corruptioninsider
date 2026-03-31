@@ -22,13 +22,15 @@ from app.config.config import ConfigLoader
 # Alembic Config object
 config = context.config
 
-# Load database URL from scraper config file
-app_config = ConfigLoader.load("ba_awards_config.json")
-database_url = app_config.get("database_url")
+# Load database URL - prefer DATABASE_URL env variable over config file
+database_url = os.getenv("DATABASE_URL")
+if not database_url:
+    app_config = ConfigLoader.load("ba_awards_config.json")
+    database_url = app_config.get("database_url")
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 else:
-    raise ValueError("database_url not found in ba_awards_config.json")
+    raise ValueError("DATABASE_URL env variable or database_url in ba_awards_config.json required")
 
 # Interpret the config file for Python logging
 if config.config_file_name is not None:
