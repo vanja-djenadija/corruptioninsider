@@ -16,6 +16,21 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build:
+      context: .
+      dockerfile: data-pipeline/Dockerfile
+    container_name: corruptioninsider-migrate
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - corruptioninsider-net
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
+
   backend:
     build: ./backend
     image: corruptioninsider-backend
@@ -26,6 +41,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     networks:
       - corruptioninsider-net
 
