@@ -1,5 +1,5 @@
 {
-  "database_url": "postgresql://pyhack:pyhack_secret@localhost:5433/pyhackcorruption",
+  "database_url": "${DATABASE_URL}",
   "raw_directory": "data/raw/ba/company_registry_rs",
   "log_directory": "data/logs",
   "request_timeout": 300,
